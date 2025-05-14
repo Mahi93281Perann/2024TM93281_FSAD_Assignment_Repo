@@ -31,16 +31,23 @@ function Signup() {
   };
 
   return (
-    <div>
-      <h2>Signup</h2>
+    <div style={{ padding: '40px', textAlign: 'center' }}>
+      <h2>School Vaccination System</h2>
       <form onSubmit={handleSubmit}>
-        <input type="text" name="username" placeholder="Username" onChange={handleChange} required />
+        <input size={20}
+              style={{ fontSize: '20px', fontWeight: 'bold' , padding: '10px', margin: '10px'}}
+              type="text" name="username" placeholder="Username" onChange={handleChange} required />
         <br />
-        <input type="email" name="email" placeholder="Email" onChange={handleChange} required />
+        <input size={20}
+              style={{ fontSize: '20px', fontWeight: 'bold', padding: '10px', margin: '10px' }}
+              type="email" name="email" placeholder="Email" onChange={handleChange} required />
         <br />
-        <input type="password" name="password" placeholder="Password" onChange={handleChange} required />
+        <input size={20}
+              style={{ fontSize: '20px', fontWeight: 'bold', padding: '10px', margin: '10px' }}
+              type="password" name="password" placeholder="Password" onChange={handleChange} required />
         <br />
-        <button type="submit">Signup</button>
+        <button type="submit" style={{ width: '120px', height: '40px', fontSize: '24px', fontWeight:'bold' }}>Signup</button>
+        
       </form>
     </div>
   );

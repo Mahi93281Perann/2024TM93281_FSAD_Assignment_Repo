@@ -7,41 +7,76 @@ from db import db
 
 vaccination_bp = Blueprint('vaccination_bp', __name__)
 
-@vaccination_bp.route('/active-vaccines', methods=['GET'])
-def get_active_vaccines():
-    today = datetime.now().date()
-    drives = VaccinationDrive.query.filter(VaccinationDrive.drive_date >= today).all()
-    vaccines = list({drive.vaccine_name for drive in drives})  # Unique vaccine names
-    return jsonify(vaccines)
-
 @vaccination_bp.route('/vaccinate', methods=['POST'])
 def mark_vaccinated():
     data = request.json
     student_id = data.get('student_id')
-    vaccine_name = data.get('vaccine_name')
+    drive_id = data.get('drive_id')  # 📌 Make sure you're using drive_id here
 
-    if not student_id or not vaccine_name:
-        return jsonify({"error": "Missing student_id or vaccine_name"}), 400
+    if not student_id or not drive_id:
+        return jsonify({"error": "Missing student_id or drive_id"}), 400
+
+    try:
+        drive_id = int(drive_id)  # 🔥 Convert to integer to avoid SQLAlchemy error
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid drive_id format"}), 400
 
     student = Student.query.filter_by(id=student_id).first()
     if not student:
         return jsonify({"error": "Student not found"}), 404
 
-    existing = VaccinationRecord.query.filter_by(student_id=student_id, vaccine_name=vaccine_name).first()
+    drive = VaccinationDrive.query.get(drive_id)
+    if not drive:
+        return jsonify({"error": "Vaccination drive not found"}), 404
+
+    # Prevent duplicate vaccination for same vaccine and student
+    existing = VaccinationRecord.query.filter_by(student_id=student_id, vaccine_name=drive.vaccine_name).first()
     if existing:
         return jsonify({"message": "Student already vaccinated for this vaccine"}), 409
 
     record = VaccinationRecord(
         student_id=student_id,
-        vaccine_name=vaccine_name,
-        vaccination_date=datetime.now().strftime('%Y-%m-%d')
+        drive_id=drive_id,
+        vaccine_name=drive.vaccine_name,
+        date_administered=datetime.now()
     )
+
     db.session.add(record)
 
-    # Update student info (optional but helpful for display)
+    # Update student table (optional)
     student.is_vaccinated = True
-    student.vaccine_name = vaccine_name
-    student.vaccination_date = record.vaccination_date
+    student.vaccine_name = drive.vaccine_name
+    student.vaccination_date = record.date_administered
 
     db.session.commit()
+
     return jsonify({"message": "Vaccination recorded", "record": record.to_dict()}), 200
+
+@vaccination_bp.route('/stats/<int:drive_id>', methods=['GET'])
+def get_drive_stats(drive_id):
+    drive = VaccinationDrive.query.get(drive_id)
+    if not drive:
+        return jsonify({"error": "Drive not found"}), 404
+
+    # Parse applicable classes
+    applicable_classes = drive.applicable_classes.split(",")
+
+    # Get eligible students
+    eligible_students = Student.query.filter(Student.grade.in_(applicable_classes)).all()
+
+    # Get vaccinated students for this drive
+    from models.vaccination_record import VaccinationRecord
+    vaccinated_records = VaccinationRecord.query.filter_by(drive_id=drive_id).all()
+
+    vaccinated_student_ids = set([v.student_id for v in vaccinated_records])
+    vaccinated_students = [s for s in eligible_students if s.id in vaccinated_student_ids]
+
+    return jsonify({
+        "drive_id": drive_id,
+        "vaccine_name": drive.vaccine_name,
+        "date": drive.drive_date.strftime("%Y-%m-%d"),
+        "eligible_students": len(eligible_students),
+        "vaccinated": len(vaccinated_students),
+        "coverage_percent": round((len(vaccinated_students) / len(eligible_students)) * 100, 2) if eligible_students else 0,
+        "remaining_doses": drive.available_doses
+    })

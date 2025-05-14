@@ -27,10 +27,12 @@ const Login = () => {
 
   return (
     <div style={{ padding: '40px', textAlign: 'center' }}>
-      <h2>School Vaccination Login</h2>
+      <h2>Student Vaccination Login</h2>
       <form onSubmit={handleLogin}>
         <div style={{ margin: '10px' }}>
           <input
+            size={16}
+            style={{ fontSize: '24px', fontWeight: 'bold' }}
             type="text"
             placeholder="Username"
             value={username}
@@ -38,8 +40,10 @@ const Login = () => {
             required
           />
         </div>
-        <div style={{ margin: '10px' }}>
+        <div style={{ margin: '10px'}}>
           <input
+            size={16}
+            style={{ fontSize: '24px', fontWeight: 'bold' }}
             type="password"
             placeholder="Password"
             value={password}
@@ -47,7 +51,9 @@ const Login = () => {
             required
           />
         </div>
-        <button type="submit">Login</button>
+
+        <button type="submit" style={{ width: '120px', height: '40px', fontSize: '24px', fontWeight:'bold' }}>Login</button>
+        
       </form>
     </div>
   );

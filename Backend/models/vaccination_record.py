@@ -19,5 +19,5 @@ class VaccinationRecord(db.Model):
             "student_id": self.student_id,
             "drive_id": self.drive_id,
             "vaccine_name": self.vaccine_name,
-            "date": self.date
+            "date": self.date_administered.strftime('%Y-%m-%d')
         }

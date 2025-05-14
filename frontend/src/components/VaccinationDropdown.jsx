@@ -5,7 +5,6 @@ const VaccinationDropdown = ({ studentId, onVaccinate }) => {
   const [selectedDriveId, setSelectedDriveId] = useState('');
 
   useEffect(() => {
-    // Fetch available (upcoming) drives
     fetch('http://localhost:5000/drives/active')
       .then(res => res.json())
       .then(data => setDrives(data))
@@ -14,12 +13,15 @@ const VaccinationDropdown = ({ studentId, onVaccinate }) => {
 
   const handleVaccinate = () => {
     if (!selectedDriveId) return;
-    onVaccinate(studentId, selectedDriveId);
+    const drive = drives.find(d => d.id === parseInt(selectedDriveId));
+    if (!drive) return;
+
+  onVaccinate(studentId, drive.id, drive.vaccine_name);
   };
 
   return (
     <div style={{ display: 'flex', gap: '5px' }}>
-      <select
+      <select style={{fontSize: '20px'}}
         value={selectedDriveId}
         onChange={(e) => setSelectedDriveId(e.target.value)}
       >
@@ -29,8 +31,8 @@ const VaccinationDropdown = ({ studentId, onVaccinate }) => {
             {d.vaccine_name} ({d.date})
           </option>
         ))}
-      </select>
-      <button onClick={handleVaccinate} disabled={!selectedDriveId}>
+      </select >
+      <button onClick={handleVaccinate} disabled={!selectedDriveId} style={{ fontSize: '20px'}}>
         Vaccinate
       </button>
     </div>

@@ -63,39 +63,53 @@ def delete_student(id):
     return jsonify({"message": "Student deleted"})
 
 # Bulk CSV Upload
-@student_bp.route('/upload_csv', methods=['POST'])
-def upload_students_csv():
+from flask import request, jsonify
+import csv
+from io import StringIO
+from models.student import Student
+from db import db
+from sqlalchemy.exc import IntegrityError
+
+@student_bp.route('/upload', methods=['POST'])
+def upload_students():
     if 'file' not in request.files:
-        return jsonify({'error': 'CSV file missing'}), 400
+        return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
+    if not file.filename.endswith('.csv'):
+        return jsonify({"error": "Only CSV files allowed"}), 400
+
+    stream = StringIO(file.stream.read().decode("UTF8"), newline=None)
+    csv_input = csv.DictReader(stream)  # This will read rows as dictionaries
+    added, skipped = 0, 0
+
+    for row in csv_input:
+        # Ensure that the keys are in the expected format
+        if 'name' not in row or 'student_id' not in row or 'grade' not in row:
+            skipped += 1
+            continue
+        
+        name, student_id, grade = row['name'], row['student_id'], row['grade']
+
+        # Avoid duplicates
+        existing = Student.query.filter_by(student_id=student_id).first()
+        if existing:
+            skipped += 1
+            continue
+
+        new_student = Student(name=name, student_id=student_id, grade=grade)
+        db.session.add(new_student)
+        added += 1
 
     try:
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        df = pd.read_csv(stream)
-
-        required_columns = {'name', 'class_name'}
-        if not required_columns.issubset(set(df.columns)):
-            return jsonify({'error': 'CSV must contain name and class_name columns'}), 400
-
-        students = []
-        for _, row in df.iterrows():
-            student = Student(
-                name=row['name'],
-                class_name=row['class_name'],
-                vaccination_status=False
-            )
-            students.append(student)
-
-        db.session.bulk_save_objects(students)
         db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
 
-        return jsonify({'message': f'{len(students)} students added successfully'}), 201
+    return jsonify({"message": f"{added} students added, {skipped} skipped."}), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
     
-
     # Mark Student Vaccinated
 @student_bp.route('/<int:student_id>/vaccinate', methods=['POST'])
 def mark_student_vaccinated(student_id):

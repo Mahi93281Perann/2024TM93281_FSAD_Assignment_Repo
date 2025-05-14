@@ -9,6 +9,9 @@ class VaccinationDrive(db.Model):
     available_doses = db.Column(db.Integer, nullable=False)
     applicable_classes = db.Column(db.String(100), nullable=False)
 
+    def __repr__(self):
+        return f"<VaccinationDrive {self.vaccine_name}>"
+    
     def to_dict(self):
         return {
             "id": self.id,
